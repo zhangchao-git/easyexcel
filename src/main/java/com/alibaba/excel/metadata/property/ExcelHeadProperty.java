@@ -1,16 +1,5 @@
 package com.alibaba.excel.metadata.property;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.format.DateTimeFormat;
 import com.alibaba.excel.annotation.format.NumberFormat;
@@ -24,6 +13,11 @@ import com.alibaba.excel.util.ClassUtils;
 import com.alibaba.excel.util.CollectionUtils;
 import com.alibaba.excel.util.StringUtils;
 import com.alibaba.excel.write.metadata.holder.AbstractWriteHolder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.util.*;
 
 /**
  * Define the header attribute of excel
@@ -128,6 +122,25 @@ public class ExcelHeadProperty {
                 .isEmpty(((AbstractWriteHolder) holder).getIncludeColumnIndexes()));
         ClassUtils.declaredFields(headClazz, sortedAllFiledMap, indexFiledMap, ignoreMap, convertAllFiled, needIgnore,
             holder);
+
+        //根据includeColumnFiledNames顺序修改sortedAllFiledMap的顺序
+        //TODO 是否写到ClassUtils中
+        if ((holder instanceof AbstractWriteHolder) &&
+            !CollectionUtils.isEmpty(((AbstractWriteHolder) holder).getIncludeColumnFiledNames())) {
+            Map<String, Field> filedNameMap = new HashMap<String, Field>();
+            for (Map.Entry<Integer, Field> entry : sortedAllFiledMap.entrySet()) {
+                filedNameMap.put(entry.getValue().getName(), entry.getValue());
+            }
+            Map<Integer, Field> newSortedAllFiledMap = new TreeMap<Integer, Field>();
+            int columnIndex = 0;
+            for (String columnFiledNames : ((AbstractWriteHolder) holder).getIncludeColumnFiledNames()) {
+                if (filedNameMap.containsKey(columnFiledNames)) {
+                    newSortedAllFiledMap.put(columnIndex++, filedNameMap.get(columnFiledNames));
+                }
+            }
+            sortedAllFiledMap = newSortedAllFiledMap;
+        }
+
 
         for (Map.Entry<Integer, Field> entry : sortedAllFiledMap.entrySet()) {
             initOneColumnProperty(entry.getKey(), entry.getValue(), indexFiledMap.containsKey(entry.getKey()));
